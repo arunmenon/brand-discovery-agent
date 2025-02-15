@@ -1,4 +1,5 @@
-from crew_definition import BrandGraphCrew
+from core.crew_definition import BrandGraphCrew
+from core.graph_updater import BrandGraphIngester
 
 def main():
     # Example input for Category Mode
@@ -8,7 +9,7 @@ def main():
         "product_type": "Running Shoes"
     }
     
-    # Or for Brand Mode:
+    # Alternatively, for Brand Mode:
     # input_data = {
     #     "mode": "brand",
     #     "brand": "Nike",
@@ -18,14 +19,11 @@ def main():
     
     crew_instance = BrandGraphCrew()
     
-    # Optionally, set up Neo4j indexes once at startup:
-    from graph_updater import GraphUpdaterAgent
-    updater = GraphUpdaterAgent()
-    updater.setup_indexes()
+    # Set up indexes once at startup
+    ingester = BrandGraphIngester()
+    ingester.setup_indexes()
     
-    # Kick off the crew with inputs
     result = crew_instance.crew().kickoff(inputs=input_data)
-    # The after_kickoff hook will update the graph.
     print("Final result:", result)
 
 if __name__ == "__main__":

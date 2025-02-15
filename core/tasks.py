@@ -1,5 +1,5 @@
 from crewai import Task
-from agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
+from core.agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
 
 def brand_discovery_task():
     description = r"""

@@ -1,7 +1,7 @@
 from crewai import Agent, LLM
-from config import OPENAI_API_KEY
+from config.config import OPENAI_API_KEY  # example usage of API keys
 
-# Initialize the LLM instance
+# Initialize a shared LLM instance
 llm_instance = LLM(model="openai/gpt-4", temperature=0.2, verbose=False)
 
 def get_brand_discovery_agent():

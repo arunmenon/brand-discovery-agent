@@ -2,15 +2,14 @@ import json
 from typing import Any, Dict, List
 from crewai import Crew, Process
 from crewai.project import CrewBase, before_kickoff, after_kickoff, crew
-from config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
-from agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
-from tasks import brand_discovery_task, attribute_extraction_task, variation_generation_task
-from graph_updater import GraphUpdaterAgent
+from core.tasks import brand_discovery_task, attribute_extraction_task, variation_generation_task
+from core.graph_updater import BrandGraphIngester
+from core.agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
 
 @CrewBase
 class BrandGraphCrew:
     """
-    Crew that builds/updates a Brand Knowledge Graph in Neo4j.
+    Crew that builds/updates a Brand Knowledge Graph using an agentic flow.
     
     Supports two modes:
       - Category Mode: Discovers brands given a category and product type, then extracts attributes
@@ -51,7 +50,7 @@ class BrandGraphCrew:
     @after_kickoff
     def update_graph(self, output: Dict[str, Any]):
         mode = self.inputs.get("mode", "category").lower()
-        updater = GraphUpdaterAgent()
+        ingester = BrandGraphIngester()
         category = self.inputs.get("category", "")
         product_type = self.inputs.get("product_type", "")
         
@@ -80,7 +79,7 @@ class BrandGraphCrew:
                 except Exception as e:
                     print(f"[update_graph] Variation generation failed for {brand}: {e}")
                     variations = []
-                updater.upsert_brand_info(brand, category, product_type, attrs, variations)
+                ingester.upsert_brand_info(brand, category, product_type, attrs, variations)
         elif mode == "brand":
             brand = self.inputs.get("brand", "")
             try:
@@ -93,6 +92,6 @@ class BrandGraphCrew:
             except Exception as e:
                 print(f"[update_graph] Error parsing variations for {brand}: {e}")
                 variations = []
-            updater.upsert_brand_info(brand, category, product_type, attrs, variations)
-        print("[after_kickoff] Neo4j graph update completed.")
+            ingester.upsert_brand_info(brand, category, product_type, attrs, variations)
+        print("[after_kickoff] BrandGraphIngester has updated the graph.")
         return output

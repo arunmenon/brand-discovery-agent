@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
-from config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from config.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 
-class GraphUpdaterAgent:
+class BrandGraphIngester:
     def __init__(self):
         self.driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
@@ -39,7 +39,7 @@ class GraphUpdaterAgent:
                     "MERGE (b:Brand {name:$brand})-[:HAS_VARIATION]->(v)",
                     {"var": var, "brand": brand}
                 )
-        print(f"[GraphUpdaterAgent] Upserted data for brand: {brand}")
+        print(f"[BrandGraphIngester] Upserted data for brand: {brand}")
 
     def setup_indexes(self):
         with self.driver.session() as session:
@@ -49,4 +49,4 @@ class GraphUpdaterAgent:
             session.run("CREATE CONSTRAINT IF NOT EXISTS ON (a:Attribute) ASSERT a.name IS UNIQUE")
             session.run("CREATE CONSTRAINT IF NOT EXISTS ON (v:Value) ASSERT v.name IS UNIQUE")
             session.run("CREATE CONSTRAINT IF NOT EXISTS ON (v:Counterfeit) ASSERT v.name IS UNIQUE")
-        print("[GraphUpdaterAgent] Indexes and constraints set up.")
+        print("[BrandGraphIngester] Indexes and constraints set up.")
