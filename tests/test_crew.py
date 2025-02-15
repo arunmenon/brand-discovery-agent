@@ -3,6 +3,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 from core.crew_definition import BrandGraphCrew
 from core.graph_updater import BrandGraphIngester
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 def test_crew_brand_mode():
     """

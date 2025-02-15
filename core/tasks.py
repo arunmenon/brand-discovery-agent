@@ -1,5 +1,23 @@
 from crewai import Task
 from core.agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
+from core.agents import get_product_type_agent
+
+def product_type_discovery_task():
+    description = r"""
+Given a product category: {category}
+
+**INSTRUCTIONS**:
+List out common product types that belong under this category.
+Return strictly a JSON array of product types.
+For example:
+["Running Shoes", "Hiking Boots", "Casual Sneakers"]
+No extra commentary.
+"""
+    return Task(
+        description=description,
+        expected_output='["Running Shoes", "Sandals"]',
+        agent=get_product_type_agent()
+    )
 
 def brand_discovery_task():
     description = r"""

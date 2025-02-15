@@ -4,6 +4,21 @@ from config.config import OPENAI_API_KEY  # example usage of API keys
 # Initialize a shared LLM instance
 llm_instance = LLM(model="openai/gpt-4", temperature=0.2, verbose=False)
 
+def get_product_type_agent():
+    return Agent(
+        role="Product Type Discovery",
+        goal=(
+            "Given the category '{category}', provide a JSON array listing possible product types "
+            "within that category. Return strictly JSON, e.g. [\"Running Shoes\", \"Sandals\"]. "
+            "Do not include extra commentary."
+        ),
+        backstory="An expert at enumerating product types within a broader category.",
+        llm=llm_instance,
+        memory=False,
+        verbose=True,
+        cache=False
+    )
+
 def get_brand_discovery_agent():
     return Agent(
         role="Brand Discovery",
