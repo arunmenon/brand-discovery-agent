@@ -190,7 +190,67 @@ The system passes data between components with LLM handoffs:
    - LLM analyzes patterns and inconsistencies
    - Output includes counterfeit indicators and rationale
 
-4. **Database Batching**
+4. **Multi-Modal LLM Integration**
+   - System leverages multi-modal LLMs for combined text and image analysis
+   - Parallel processing paths for text and image inputs
+   - Two key integration points:
+
+   a. **Image-Text Joint Analysis**
+   - Send product images and text to multi-modal LLM
+   - LLM identifies visual brand indicators and text mismatches
+   - Returns structured output with confidence scores
+   ```python
+   def analyze_listing_multimodal(listing):
+     # Prepare multimodal prompt with text and images
+     prompt = {
+       "text": f"Analyze this product listing for counterfeit indicators: {listing.text}",
+       "images": listing.images[:4]  # Limit to first 4 images
+     }
+     
+     # Get analysis from multi-modal LLM
+     response = multimodal_llm.generate(prompt)
+     
+     # Parse structured output
+     return {
+       "detected_brands": response.brands,
+       "visual_indicators": response.visual_issues,
+       "text_indicators": response.text_issues,
+       "confidence": response.confidence
+     }
+   ```
+
+   b. **Reference Comparison**
+   - LLM compares listing images against authentic reference images
+   - Identifies subtle visual differences in logo, packaging, texture
+   - Generates explanation of visual discrepancies
+   ```python
+   def compare_with_reference(listing_image, reference_images):
+     prompt = {
+       "text": "Compare the product image with these authentic reference images. Identify any visual differences that suggest counterfeiting.",
+       "images": [listing_image] + reference_images[:3]
+     }
+     
+     analysis = multimodal_llm.generate(prompt)
+     return {
+       "match_score": analysis.similarity_score,
+       "visual_differences": analysis.differences,
+       "authentication_result": analysis.is_authentic
+     }
+   ```
+
+   c. **Visual Anomaly Detection**
+   - LLM identifies unusual visual elements not present in authentic items
+   - Detects packaging inconsistencies, font differences, color variations
+   - Generates explanation of detected anomalies
+   ```python
+   # Example of visual anomaly detection
+   anomalies = multi_modal_llm.generate({
+     "text": "Identify any visual anomalies in this product that indicate counterfeiting",
+     "images": [product_image]
+   })
+   ```
+
+5. **Database Batching**
    - System optimizes Neo4j queries through batching
    - Three batch processing mechanisms:
 
