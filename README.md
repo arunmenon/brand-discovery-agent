@@ -190,31 +190,108 @@ The system passes data between components with LLM handoffs:
    - LLM analyzes patterns and inconsistencies
    - Output includes counterfeit indicators and rationale
 
-4. **Candidate Batching**
-   - System processes multiple candidates in parallel
-   - Batching by:
-     - Similar brands (5-10 listings per brand)
-     - Product categories
-     - Seller groups
-   - Batches reduce LLM API calls by 60-70%
+4. **Database Batching**
+   - System optimizes Neo4j queries through batching
+   - Three batch processing mechanisms:
+
+   a. **Listing Batches**
+   - Process 50-100 product listings per batch
+   - Group by brand to reduce redundant queries
+   - Single graph query per brand group
    ```python
-   # Pseudocode for batch processing
+   # Database batch processing
    def process_batch(listings):
-     # Group by brand to reduce redundant graph queries
      brand_groups = group_by_brand(listings)
      results = []
      
      for brand, items in brand_groups.items():
-       # Single graph query for brand data
+       # Execute ONE graph query per brand
        brand_data = graph.get_brand_data(brand)
        
-       # Process each listing with shared brand context
+       # Process listings with shared data
        for listing in items:
          result = analyze_with_context(listing, brand_data)
          results.append(result)
      
      return results
    ```
+
+   b. **Attribute Batching**
+   - Fetch all brand attributes in single query
+   - Cache attribute data by brand and product type
+   - Reduces db connections by 80%
+   ```cypher
+   // Single query for all attributes
+   MATCH (b:Brand {name: $brand})-[:PRODUCES]->(p)-[:HAS_ATTRIBUTE]->(a)
+   MATCH (a)-[:VALID_VALUE]->(v)
+   RETURN p.name as product, collect({attribute: a.name, values: collect(v.value)}) as attributes
+   ```
+
+   c. **Variation Batching**
+   - Pre-load all brand variations at startup
+   - Use in-memory matching for variation detection
+   - Update variation cache hourly
+   ```python
+   # Load all variations at once
+   def load_variation_cache():
+     query = """
+     MATCH (b:Brand)<-[:VARIATION_OF]-(v:Variation)
+     RETURN b.name as brand, collect(v.name) as variations
+     """
+     results = graph.run(query)
+     return {r['brand']: r['variations'] for r in results}
+   ```
+
+5. **Image Processing Pipeline**
+   - Process listing images for counterfeit detection
+   - Four-step analysis for each image:
+
+   a. **Logo Detection**
+   - Uses CNN model to identify brand logos
+   - Detects position, size, and clarity
+   - Flags misaligned or blurry logos
+   ```python
+   def detect_logos(image):
+     # Pre-trained model identifies brand logos
+     logos = logo_detector.process(image)
+     return [
+       {
+         "brand": logo.brand,
+         "position": logo.bbox,
+         "confidence": logo.score,
+         "issues": detect_logo_issues(logo)
+       } for logo in logos
+     ]
+   ```
+
+   b. **Image Quality Analysis**
+   - Checks image resolution against brand standards
+   - Detects artifacting and compression issues
+   - Identifies lighting inconsistencies
+
+   c. **Product Verification**
+   - Compares image against brand catalog
+   - Uses feature matching for authenticity
+   - Identifies unauthorized product variations
+   ```python
+   def verify_product(image, brand, product_type):
+     # Extract features from the image
+     features = feature_extractor.extract(image)
+     
+     # Compare against brand reference images
+     matches = reference_db.match_features(features, brand, product_type)
+     
+     return {
+       "match_score": matches.score,
+       "top_matches": matches.top_5,
+       "anomalies": matches.detect_anomalies()
+     }
+   ```
+
+   d. **Watermark/Serial Verification**
+   - OCR for serial numbers and authenticity markers
+   - Verifies serials against brand database
+   - Detects missing or incorrectly positioned markings
 
 ## Usage
 
