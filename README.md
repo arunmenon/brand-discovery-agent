@@ -101,41 +101,120 @@ This agentic architecture demonstrates a robust and modular approach to collecti
 
 Feel free to explore and extend the agents or add additional tasks as needed to further enrich the data collection process!
 
+# Brand Graph
+
+## Graph Structure
+
+The Brand Graph uses Neo4j to store brand information:
+
+1. **Nodes**
+   - **Brand**: Base nodes for each brand (Nike, Rolex)
+   - **ProductType**: Product categories (Running Shoes, Watches)
+   - **Attribute**: Product features (Color, Size, Material)
+   - **AttributeValue**: Specific values ("Red", "Size 10", "Steel")
+   - **Variation**: Alternative spellings ("N1ke", "Roleks")
+
+2. **Relationships**
+   - **PRODUCES**: Links brands to products
+   - **HAS_ATTRIBUTE**: Connects products to attributes
+   - **VALID_VALUE**: Links attributes to values
+   - **VARIATION_OF**: Connects variations to brands
+   - **COUNTERFEIT_INDICATOR**: Links counterfeit patterns to brands
+
+3. **Properties**
+   - **confidence**: Numeric score for verification
+   - **source**: Data origin
+   - **last_updated**: Modification timestamp
+   - **counterfeit_risk**: Risk score for variations
+
+## Query Optimization
+
+The graph queries need optimization for production use:
+
+1. **Indexing**
+   - Create indexes on Brand.name and ProductType.name
+   - Add compound indexes for frequently accessed patterns
+   ```cypher
+   CREATE INDEX brand_name FOR (b:Brand) ON (b.name)
+   CREATE INDEX product_type FOR (p:ProductType) ON (p.name)
+   ```
+
+2. **Query Caching**
+   - Cache frequent brand lookups
+   - Implement LRU cache for attribute patterns
+   - Use Neo4j query plan cache for repetitive queries
+
+3. **Batch Processing**
+   - Implement batch queries for multiple listings
+   - Process 50-100 products per batch
+   - Use UNWIND for bulk operations:
+   ```cypher
+   UNWIND $brandList AS brand
+   MATCH (b:Brand {name: brand})
+   RETURN b.name, collect(b.attributes) as attrs
+   ```
+
 # Counterfeit Detection System
 
-## Overview
+## LLM Integration Flow
 
-The counterfeit detection system is an advanced module built on top of the brand graph infrastructure that analyzes product listings to identify potential counterfeit items. It combines natural language processing, brand knowledge graph integration, and a sophisticated scoring algorithm to provide accurate counterfeit risk assessments.
+The system passes data between components with LLM handoffs:
 
-## Architecture
+1. **Text Extraction → LLM → Brand Identification**
+   - Raw listing text sent to LLM
+   - LLM extracts brand mentions and confidence
+   - Structured output:
+   ```json
+   {
+     "brands": [
+       {"name": "Nike", "confidence": 0.92},
+       {"name": "Jordn", "confidence": 0.67, "possible_variation": true}
+     ]
+   }
+   ```
 
-The system operates through several interconnected components:
+2. **LLM → Graph Query Construction**
+   - LLM generates optimized Neo4j queries
+   - Queries account for exact and fuzzy matching
+   - Example handoff:
+   ```python
+   # LLM output used to construct query
+   query = llm_output["query_template"].format(
+     brand=listing.brand,
+     product_type=listing.category
+   )
+   ```
 
-1. **Brand Extraction Engine**
-   - Analyzes product listing text to identify mentioned brands
-   - Assigns confidence scores for brand detection
-   - Handles misspellings and variations using fuzzy matching
-   - Integrates with the brand graph for context and validation
+3. **Graph Results → LLM → Pattern Analysis**
+   - Graph data passed to LLM
+   - LLM analyzes patterns and inconsistencies
+   - Output includes counterfeit indicators and rationale
 
-2. **Counterfeit Indicator Detection**
-   - Identifies suspicious patterns such as:
-     - Unusually low pricing relative to market standards
-     - Inconsistent or missing product attributes
-     - Suspicious seller characteristics or history
-     - Atypical product descriptions or quality claims
-     - Geographical discrepancies (shipping origin vs. claimed origin)
-
-3. **Weighted Scoring System**
-   - Applies different weights to various counterfeit indicators
-   - Calculates a comprehensive risk score (0-100)
-   - Provides confidence intervals for the assessment
-   - Adjusts scoring based on brand-specific counterfeiting patterns
-
-4. **Brand Graph Integration**
-   - Retrieves known counterfeit patterns for specific brands
-   - Updates the graph with newly discovered counterfeit indicators
-   - Leverages relationship data to improve detection accuracy
-   - Provides contextual information about genuine product attributes
+4. **Candidate Batching**
+   - System processes multiple candidates in parallel
+   - Batching by:
+     - Similar brands (5-10 listings per brand)
+     - Product categories
+     - Seller groups
+   - Batches reduce LLM API calls by 60-70%
+   ```python
+   # Pseudocode for batch processing
+   def process_batch(listings):
+     # Group by brand to reduce redundant graph queries
+     brand_groups = group_by_brand(listings)
+     results = []
+     
+     for brand, items in brand_groups.items():
+       # Single graph query for brand data
+       brand_data = graph.get_brand_data(brand)
+       
+       # Process each listing with shared brand context
+       for listing in items:
+         result = analyze_with_context(listing, brand_data)
+         results.append(result)
+     
+     return results
+   ```
 
 ## Usage
 
