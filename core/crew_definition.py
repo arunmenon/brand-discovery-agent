@@ -3,8 +3,9 @@ from typing import Any, Dict, List
 from crewai import Crew, Process
 from crewai.project import CrewBase, before_kickoff, after_kickoff, crew
 from core.tasks import brand_discovery_task, attribute_extraction_task, variation_generation_task
-from core.graph_updater import BrandGraphIngester
+from core.BrandGraphIngester import BrandGraphIngester
 from core.agents import get_brand_discovery_agent, get_attribute_extraction_agent, get_brand_variation_agent
+from core.web_scraper import scrape_counterfeit_listings
 
 @CrewBase
 class BrandGraphCrew:
@@ -79,7 +80,12 @@ class BrandGraphCrew:
                 except Exception as e:
                     print(f"[update_graph] Variation generation failed for {brand}: {e}")
                     variations = []
-                ingester.upsert_brand_info(brand, category, product_type, attrs, variations)
+
+                # 🔍 NEW: Scrape counterfeit brand names
+                scraped_variations = scrape_counterfeit_listings(brand)
+                all_variations = list(set(variations + scraped_variations))
+
+                ingester.upsert_brand_info(brand, category, product_type, attrs, all_variations)
         elif mode == "brand":
             brand = self.inputs.get("brand", "")
             try:
