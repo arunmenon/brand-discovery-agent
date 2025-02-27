@@ -242,57 +242,6 @@ The system passes data between components with LLM handoffs:
      return {r['brand']: r['variations'] for r in results}
    ```
 
-5. **Image Processing Pipeline**
-   - Process listing images for counterfeit detection
-   - Four-step analysis for each image:
-
-   a. **Logo Detection**
-   - Uses CNN model to identify brand logos
-   - Detects position, size, and clarity
-   - Flags misaligned or blurry logos
-   ```python
-   def detect_logos(image):
-     # Pre-trained model identifies brand logos
-     logos = logo_detector.process(image)
-     return [
-       {
-         "brand": logo.brand,
-         "position": logo.bbox,
-         "confidence": logo.score,
-         "issues": detect_logo_issues(logo)
-       } for logo in logos
-     ]
-   ```
-
-   b. **Image Quality Analysis**
-   - Checks image resolution against brand standards
-   - Detects artifacting and compression issues
-   - Identifies lighting inconsistencies
-
-   c. **Product Verification**
-   - Compares image against brand catalog
-   - Uses feature matching for authenticity
-   - Identifies unauthorized product variations
-   ```python
-   def verify_product(image, brand, product_type):
-     # Extract features from the image
-     features = feature_extractor.extract(image)
-     
-     # Compare against brand reference images
-     matches = reference_db.match_features(features, brand, product_type)
-     
-     return {
-       "match_score": matches.score,
-       "top_matches": matches.top_5,
-       "anomalies": matches.detect_anomalies()
-     }
-   ```
-
-   d. **Watermark/Serial Verification**
-   - OCR for serial numbers and authenticity markers
-   - Verifies serials against brand database
-   - Detects missing or incorrectly positioned markings
-
 ## Usage
 
 The counterfeit detection system can be used in several ways:
